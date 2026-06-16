@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🇩🇪 NL ↔ DE Flashcards</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --card-bg: #22263a;
+    --card-border: #2e3354;
+    --accent: #6c8ef5;
+    --accent2: #a78bfa;
+    --good: #34d399;
+    --bad: #f87171;
+    --text: #e8eaf6;
+    --muted: #8891b4;
+    --radius: 18px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+
+  #progress-bar-wrap {
+    width: 100%;
+    max-width: 560px;
+    height: 6px;
+    background: var(--card-border);
+    border-radius: 99px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 99px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  #stats {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 28px;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  #stats span { display: flex; align-items: center; gap: 5px; }
+  #stats .stat-good { color: var(--good); }
+  #stats .stat-bad { color: var(--bad); }
+
+  .scene {
+    width: 100%;
+    max-width: 560px;
+    height: 240px;
+    perspective: 1000px;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(.4,0,.2,1);
+    cursor: pointer;
+  }
+
+  .card.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    border: 1.5px solid var(--card-border);
+    text-align: center;
+  }
+
+  .card-front {
+    background: var(--card-bg);
+  }
+
+  .card-back {
+    background: linear-gradient(135deg, #1e2340, #252a48);
+    transform: rotateY(180deg);
+    border-color: var(--accent);
+  }
+
+  .card-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+
+  .card-front .card-label { color: var(--muted); }
+  .card-back .card-label { color: var(--accent2); }
+
+  .card-text {
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .card-front .card-text { color: var(--text); }
+  .card-back .card-text { color: #c7d2fe; }
+
+  .card-category {
+    margin-top: 12px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: rgba(108, 142, 245, 0.1);
+    border: 1px solid rgba(108, 142, 245, 0.2);
+    padding: 3px 10px;
+    border-radius: 99px;
+  }
+
+  #controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 12px;
+    padding: 14px 28px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.15s, box-shadow 0.15s;
+    font-family: var(--font);
+  }
+
+  .btn:hover { transform: translateY(-2px); opacity: 0.92; }
+  .btn:active { transform: scale(0.97); }
+
+  #btn-show {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    width: 100%;
+    box-shadow: 0 4px 24px rgba(108,142,245,0.3);
+  }
+
+  .answer-btns {
+    display: flex;
+    gap: 14px;
+    width: 100%;
+  }
+
+  #btn-good {
+    background: var(--good);
+    color: #052e16;
+    flex: 1;
+  }
+
+  #btn-bad {
+    background: var(--bad);
+    color: #450a0a;
+    flex: 1;
+  }
+
+  .hidden { display: none !important; }
+
+  /* Summary Screen */
+  #summary {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 560px;
+    width: 100%;
+    gap: 20px;
+  }
+
+  #summary.active { display: flex; }
+
+  #summary h2 {
+    font-size: 1.7rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--good), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .summary-stat {
+    background: var(--card-bg);
+    border: 1.5px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 20px 12px;
+  }
+
+  .summary-stat .num { font-size: 2rem; font-weight: 700; }
+  .summary-stat .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+  .summary-stat.good .num { color: var(--good); }
+  .summary-stat.bad .num { color: var(--bad); }
+  .summary-stat.total .num { color: var(--accent); }
+
+  .summary-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  #btn-retry-errors {
+    background: linear-gradient(135deg, var(--bad), #c05474);
+    color: #fff;
+    width: 100%;
+    padding: 16px;
+  }
+
+  #btn-restart {
+    background: var(--card-bg);
+    border: 1.5px solid var(--card-border);
+    color: var(--text);
+    width: 100%;
+    padding: 16px;
+  }
+
+  /* Mode selector */
+  #mode-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 28px;
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 6px;
+  }
+
+  .mode-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .mode-btn.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* Errors list */
+  #errors-panel {
+    display: none;
+    width: 100%;
+    max-width: 560px;
+    margin-top: 16px;
+  }
+
+  #errors-panel.active { display: block; }
+  #errors-panel h3 { color: var(--bad); margin-bottom: 12px; font-size: 0.9rem; }
+
+  .error-item {
+    background: var(--surface);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+  }
+
+  .error-item .nl { color: var(--text); }
+  .error-item .de { color: var(--muted); }
+
+  #game { width: 100%; display: flex; flex-direction: column; align-items: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🇩🇪 NL ↔ DE Flashcards</h1>
+  <p id="deck-info">Alle kaarten laden...</p>
+</header>
+
+<div id="mode-selector">
+  <button class="mode-btn active" onclick="setMode('all')">Alle kaarten</button>
+  <button class="mode-btn" onclick="setMode('errors')">Fouten herhalen</button>
+</div>
+
+<div id="game">
+  <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+  <div id="stats">
+    <span>📊 <span id="stat-pos">0</span> / <span id="stat-total">0</span></span>
+    <span class="stat-good">✓ <span id="stat-good">0</span></span>
+    <span class="stat-bad">✗ <span id="stat-bad">0</span></span>
+  </div>
+
+  <div class="scene">
+    <div class="card" id="card">
+      <div class="card-face card-front">
+        <div class="card-label">🇳🇱 Nederlands</div>
+        <div class="card-text" id="front-text">–</div>
+        <div class="card-category" id="front-cat"></div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-label">🇩🇪 Duits</div>
+        <div class="card-text" id="back-text">–</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <button class="btn" id="btn-show" onclick="showAnswer()">Toon antwoord</button>
+    <div class="answer-btns hidden" id="answer-btns">
+      <button class="btn" id="btn-good" onclick="answer(true)">✓ Goed</button>
+      <button class="btn" id="btn-bad" onclick="answer(false)">✗ Fout</button>
+    </div>
+  </div>
+</div>
+
+<div id="summary">
+  <h2 id="summary-title">Ronde voltooid! 🎉</h2>
+  <p id="summary-sub" style="color:var(--muted);font-size:0.9rem"></p>
+  <div class="summary-grid">
+    <div class="summary-stat total"><div class="num" id="s-total">0</div><div class="lbl">Totaal</div></div>
+    <div class="summary-stat good"><div class="num" id="s-good">0</div><div class="lbl">Goed</div></div>
+    <div class="summary-stat bad"><div class="num" id="s-bad">0</div><div class="lbl">Fout</div></div>
+  </div>
+  <div class="summary-btns">
+    <button class="btn" id="btn-retry-errors" onclick="retryErrors()">🔁 Herhaal fouten (<span id="error-count">0</span>)</button>
+    <button class="btn" id="btn-restart" onclick="restartAll()">↺ Begin opnieuw (alle kaarten)</button>
+  </div>
+  <div id="errors-panel">
+    <h3>❌ Gemaakte fouten:</h3>
+    <div id="errors-list"></div>
+  </div>
+</div>
+
+<script>
+const ALL_CARDS = [
+  // ── CONJUNCTIONS (Images 1 & 2) ──────────────────────────────────────────
+  { nl: "Nadat ze te veel had gegeten, wilde ze afvallen.", de: "Nachdem sie zu viel gegessen hatte, wollte sie abnehmen.", cat: "Voegwoorden" },
+  { nl: "Voordat je spreekt, moet je nadenken.", de: "Bevor du sprichst, sollst du nachdenken.", cat: "Voegwoorden" },
+  { nl: "Hij komt niet meer, omdat jij dat gezegd hebt.", de: "Er kommt nicht mehr, weil du das gesagt hast.", cat: "Voegwoorden" },
+  { nl: "Hij komt niet, want hij kent daar niemand.", de: "Er kommt nicht, denn er kennt dort niemanden.", cat: "Voegwoorden" },
+  { nl: "Terwijl hij werkt, luistert hij naar muziek.", de: "Während er arbeitet, hört er Musik.", cat: "Voegwoorden" },
+  { nl: "Als ik tijd heb, kom ik. (indien/wanneer)", de: "Wenn ich Zeit habe, dann komme ich.", cat: "Voegwoorden" },
+  { nl: "Telkens als ik in Rome was, bezocht ik hem altijd.", de: "Wenn ich in Rom war, besuchte ich ihn immer.", cat: "Voegwoorden" },
+  { nl: "Toen ik in Rome was, bezocht ik het Colosseum.", de: "Als ich in Rom war, besuchte ich das Colosseum.", cat: "Voegwoorden" },
+  { nl: "Hoewel hij het weet, zegt hij het niet.", de: "Obwohl er es weiß, sagt er es nicht.", cat: "Voegwoorden" },
+  { nl: "Sindsdien hij niet meer ziek is, is hij ook in een beter humeur.", de: "Seitdem er nicht mehr krank ist, ist er auch besser gelaunt.", cat: "Voegwoorden" },
+  { nl: "Dat ze nooit tijd heeft, weet ik al lang.", de: "Dass sie nie Zeit hat, weiß ich schon lange.", cat: "Voegwoorden" },
+  { nl: "Hij is niet groot, maar klein.", de: "Er ist nicht groß, sondern klein.", cat: "Voegwoorden – sondern" },
+  { nl: "Het huis is niet klein, maar groot.", de: "Das Haus ist nicht klein, sondern groß.", cat: "Voegwoorden – sondern" },
+  { nl: "Deze vrouw is niet rijk, maar arm.", de: "Diese Frau ist nicht reich, sondern arm.", cat: "Voegwoorden – sondern" },
+  { nl: "Deze vrouw is niet rijk, maar wel heel vrijgevig.", de: "Diese Frau ist nicht reich, aber sehr großzügig.", cat: "Voegwoorden – aber" },
+  { nl: "Ze is niet alleen rijk, maar ook heel slim.", de: "Sie ist nicht nur reich, sondern auch sehr schlau.", cat: "Voegwoorden – nicht nur…sondern auch" },
+
+  // ── GRUNDWORTSCHATZ Reihe 1 (Image 3) ─────────────────────────────────────
+  { nl: "Hij krijgt alles.", de: "Er bekommt alles.", cat: "Grundwortschatz R1" },
+  { nl: "Hij weet dat hij moet komen.", de: "Er weiß, dass er kommen muss.", cat: "Grundwortschatz R1" },
+  { nl: "Het bevalt mijn ouders niet.", de: "Es gefällt meinen Eltern nicht.", cat: "Grundwortschatz R1" },
+  { nl: "Waarom doe je dat?", de: "Warum machst du das?", cat: "Grundwortschatz R1" },
+  { nl: "Hij mag niet komen.", de: "Er darf nicht kommen.", cat: "Grundwortschatz R1" },
+  { nl: "Ze zal het nooit weten.", de: "Sie wird es nie wissen.", cat: "Grundwortschatz R1" },
+  { nl: "Hij spreekt langzaam.", de: "Er spricht langsam.", cat: "Grundwortschatz R1" },
+  { nl: "Hij zou graag naar huis gaan.", de: "Er würde gerne nach Hause gehen.", cat: "Grundwortschatz R1" },
+  { nl: "Is er hier een leraar?", de: "Ist hier ein Lehrer?", cat: "Grundwortschatz R1" },
+  { nl: "Hebben jullie veel tijd?", de: "Haben Sie viel Zeit?", cat: "Grundwortschatz R1" },
+
+  // ── Reihe 2 ───────────────────────────────────────────────────────────────
+  { nl: "Hij geniet van de vakantie.", de: "Er genießt den Urlaub.", cat: "Grundwortschatz R2" },
+  { nl: "Het is belangrijk dat je het weet.", de: "Es ist wichtig, dass du es weißt.", cat: "Grundwortschatz R2" },
+  { nl: "Wie heeft dat gezegd?", de: "Wer hat das gesagt?", cat: "Grundwortschatz R2" },
+  { nl: "Iemand moet het weten.", de: "Jemand muss es wissen.", cat: "Grundwortschatz R2" },
+  { nl: "Kan u mij helpen?", de: "Können Sie mir helfen?", cat: "Grundwortschatz R2" },
+  { nl: "Hij blijft maar een uur.", de: "Er bleibt nur eine Stunde.", cat: "Grundwortschatz R2" },
+  { nl: "Wat is de reden?", de: "Was ist der Grund?", cat: "Grundwortschatz R2" },
+  { nl: "Kan je de zin vertalen?", de: "Kannst du den Satz übersetzen?", cat: "Grundwortschatz R2" },
+  { nl: "Wil je het mij tonen?", de: "Willst du es mir zeigen?", cat: "Grundwortschatz R2" },
+  { nl: "Kan je mij een voorbeeld geven?", de: "Kannst du mir ein Beispiel geben?", cat: "Grundwortschatz R2" },
+
+  // ── Reihe 3 ───────────────────────────────────────────────────────────────
+  { nl: "Excuseer.", de: "Entschuldigung.", cat: "Grundwortschatz R3" },
+  { nl: "Het spijt me.", de: "Es tut mir leid.", cat: "Grundwortschatz R3" },
+  { nl: "Hoe zeg je dat in het Duits?", de: "Wie sagt man das auf Deutsch?", cat: "Grundwortschatz R3" },
+  { nl: "Geen idee.", de: "Keine Ahnung.", cat: "Grundwortschatz R3" },
+  { nl: "Smakelijk.", de: "Guten Appetit.", cat: "Grundwortschatz R3" },
+  { nl: "Tot morgen.", de: "Bis morgen.", cat: "Grundwortschatz R3" },
+  { nl: "Hoe gaat het met jou?", de: "Wie geht es dir?", cat: "Grundwortschatz R3" },
+  { nl: "Wat zegt u?", de: "Wie bitte?", cat: "Grundwortschatz R3" },
+  { nl: "Tot ziens.", de: "Auf Wiedersehen.", cat: "Grundwortschatz R3" },
+  { nl: "Wat mag het zijn?", de: "Was darf es sein?", cat: "Grundwortschatz R3" },
+
+  // ── Reihe 4 – Transport (Image 4) ─────────────────────────────────────────
+  { nl: "Waar stopt de bus?", de: "Wo hält der Bus?", cat: "Grundwortschatz R4" },
+  { nl: "Hoe ver is het station?", de: "Wie weit ist der Bahnhof?", cat: "Grundwortschatz R4" },
+  { nl: "Er zijn hier geen lichten.", de: "Hier gibt es keine Ampeln.", cat: "Grundwortschatz R4" },
+  { nl: "Je moet de metro nemen.", de: "Du musst die U-Bahn nehmen.", cat: "Grundwortschatz R4" },
+  { nl: "Je moet overstappen.", de: "Du musst umsteigen.", cat: "Grundwortschatz R4" },
+  { nl: "Hier ga je rechtdoor.", de: "Hier gehen Sie geradeaus.", cat: "Grundwortschatz R4" },
+  { nl: "Waar kan ik het plein oversteken?", de: "Wo kann ich den Platz überqueren?", cat: "Grundwortschatz R4" },
+  { nl: "Hoe hoog is de toren?", de: "Wie hoch ist der Turm?", cat: "Grundwortschatz R4" },
+  { nl: "De winkel is om de hoek.", de: "Das Geschäft ist um die Ecke.", cat: "Grundwortschatz R4" },
+  { nl: "De school is in de buurt.", de: "Die Schule ist in der Nähe.", cat: "Grundwortschatz R4" },
+
+  // ── Reihe 5 – Wonen ───────────────────────────────────────────────────────
+  { nl: "De kamer is op de eerste verdieping.", de: "Das Zimmer ist im ersten Stockwerk.", cat: "Grundwortschatz R5" },
+  { nl: "Ik heb een kleerkast nodig.", de: "Ich brauche einen Kleiderschrank.", cat: "Grundwortschatz R5" },
+  { nl: "De stoel staat naast de sofa.", de: "Der Stuhl steht neben dem Sofa.", cat: "Grundwortschatz R5" },
+  { nl: "Mijn ijskast is oud.", de: "Mein Kühlschrank ist alt.", cat: "Grundwortschatz R5" },
+  { nl: "De salontafel staat in het midden.", de: "Der Couchtisch steht in der Mitte.", cat: "Grundwortschatz R5" },
+  { nl: "Op de grond ligt een tapijt.", de: "Auf dem Boden liegt ein Teppich.", cat: "Grundwortschatz R5" },
+  { nl: "Er is geen bad.", de: "Es gibt keine Badewanne.", cat: "Grundwortschatz R5" },
+  { nl: "Hij wast zich altijd aan de lavabo.", de: "Er wäscht sich immer am Waschbecken.", cat: "Grundwortschatz R5" },
+  { nl: "We hebben geen gordijnen.", de: "Wir haben keine Gardinen.", cat: "Grundwortschatz R5" },
+  { nl: "Ik studeer in mijn bureau.", de: "Ich lerne in meinem Arbeitszimmer.", cat: "Grundwortschatz R5" },
+
+  // ── Reihe 6 – Voorzetsels ─────────────────────────────────────────────────
+  { nl: "Het boek is voor mij.", de: "Das Buch ist für mich.", cat: "Grundwortschatz R6" },
+  { nl: "In het weekend blijft hij thuis.", de: "Am Wochenende bleibt er zu Hause.", cat: "Grundwortschatz R6" },
+  { nl: "Hij rijdt naar de zee.", de: "Er fährt ans Meer.", cat: "Grundwortschatz R6" },
+  { nl: "Haar boek ligt op de tafel.", de: "Ihr Buch liegt auf dem Tisch.", cat: "Grundwortschatz R6" },
+  { nl: "Zonder hem kan ze niet leven.", de: "Ohne ihn kann sie nicht leben.", cat: "Grundwortschatz R6" },
+  { nl: "Je moet naar mij komen.", de: "Du musst zu mir kommen.", cat: "Grundwortschatz R6" },
+  { nl: "Waarom ben jij tegen mij?", de: "Warum bist du gegen mich?", cat: "Grundwortschatz R6" },
+  { nl: "Er is een tuin achter het huis.", de: "Es gibt einen Garten hinter dem Haus.", cat: "Grundwortschatz R6" },
+  { nl: "Voor de brug is een kruispunt.", de: "Vor der Brücke ist eine Kreuzung.", cat: "Grundwortschatz R6" },
+  { nl: "Hoe laat ben je thuisgekomen?", de: "Wann bist du nach Hause gekommen?", cat: "Grundwortschatz R6" },
+
+  // ── Wortschatz Seite 1-6 (Image 5) ───────────────────────────────────────
+  { nl: "waardebon", de: "der Gutschein (e)", cat: "Wortschatz 1-6" },
+  { nl: "ooit", de: "je", cat: "Wortschatz 1-6" },
+  { nl: "kerstavond", de: "Heiligabend", cat: "Wortschatz 1-6" },
+  { nl: "kerstmis", de: "Weihnachten", cat: "Wortschatz 1-6" },
+  { nl: "kerstboom", de: "der Weihnachtsbaum", cat: "Wortschatz 1-6" },
+  { nl: "kerstmarkt", de: "der Weihnachtsmarkt", cat: "Wortschatz 1-6" },
+  { nl: "oudejaar", de: "Silvester", cat: "Wortschatz 1-6" },
+  { nl: "vieren", de: "feiern", cat: "Wortschatz 1-6" },
+  { nl: "gezellig", de: "gemütlich", cat: "Wortschatz 1-6" },
+  { nl: "zin (hebben in)", de: "die Lust", cat: "Wortschatz 1-6" },
+  { nl: "ruhig (rustig)", de: "ruhig", cat: "Wortschatz 1-6" },
+  { nl: "luid", de: "laut", cat: "Wortschatz 1-6" },
+  { nl: "koken", de: "kochen", cat: "Wortschatz 1-6" },
+  { nl: "ik kijk ernaar uit", de: "ich freue mich", cat: "Wortschatz 1-6" },
+  { nl: "wens", de: "der Wunsch (¨e)", cat: "Wortschatz 1-6" },
+  { nl: "voornemen", de: "der Vorsatz (¨e)", cat: "Wortschatz 1-6" },
+  { nl: "vermageren", de: "abnehmen", cat: "Wortschatz 1-6" },
+  { nl: "pensioen", de: "die Rente(n)", cat: "Wortschatz 1-6" },
+  { nl: "gepensioneerde", de: "der Rentner (-) / die Rentnerin (nen)", cat: "Wortschatz 1-6" },
+  { nl: "zich inschrijven", de: "sich anmelden", cat: "Wortschatz 1-6" },
+  { nl: "milieuvriendelijk", de: "umwelfreundlich", cat: "Wortschatz 1-6" },
+  { nl: "zich gedragen", de: "sich verhalten", cat: "Wortschatz 1-6" },
+  { nl: "lui", de: "faul", cat: "Wortschatz 1-6" },
+  { nl: "voeding", de: "die Ernährung", cat: "Wortschatz 1-6" },
+
+  // ── Verkeersschilderen (Image 6) ──────────────────────────────────────────
+  { nl: "Aan dit kruispunt heb je voorrang.", de: "An dieser Kreuzung haben Sie Vorfahrt.", cat: "Verkeersschilden" },
+  { nl: "Er is een bocht naar rechts.", de: "Es gibt eine Kurve nach rechts.", cat: "Verkeersschilden" },
+  { nl: "Hier mag je parkeren op het voetpad.", de: "Hier dürfen Sie auf dem Gehweg parken.", cat: "Verkeersschilden" },
+  { nl: "Deze straat is een doodlopende straat.", de: "Diese Straße ist eine Sackgasse.", cat: "Verkeersschilden" },
+  { nl: "De toegelaten maximumsnelheid is 60 km.", de: "Die zulässige Höchstgeschwindigkeit ist 60 km.", cat: "Verkeersschilden" },
+  { nl: "Hier is een tunnel voor voetgangers.", de: "Hier ist ein Tunnel für Fußgänger.", cat: "Verkeersschilden" },
+  { nl: "Vrachtwagens mogen niet inhalen.", de: "Lastwagen dürfen nicht überholen.", cat: "Verkeersschilden" },
+  { nl: "Door wegwerkzaamheden is er file.", de: "Wegen Baustellen gibt es einen Stau.", cat: "Verkeersschilden" },
+  { nl: "Hier mag je niet terugkeren.", de: "Hier dürfen Sie nicht wenden.", cat: "Verkeersschilden" },
+  { nl: "Deze rijstrook is voor bussen.", de: "Dieser Fahrstreifen ist für Busse.", cat: "Verkeersschilden" },
+  { nl: "Je rijdt door een eenrichtingsstraat.", de: "Sie fahren durch eine Einbahnstraße.", cat: "Verkeersschilden" },
+  { nl: "Ze wacht aan de halte.", de: "Sie wartet an der Haltestelle.", cat: "Verkeersschilden" },
+  { nl: "Hier is een laadstation voor elektrische auto's.", de: "Hier ist eine Ladestation für Elektrofahrzeuge.", cat: "Verkeersschilden" },
+  { nl: "Hier is een parking voor wandelaars.", de: "Hier ist ein Parkplatz für Wanderer.", cat: "Verkeersschilden" },
+  { nl: "Hier begint een voetgangerszone.", de: "Hier beginnt eine Fußgängerzone.", cat: "Verkeersschilden" },
+
+  // ── Kruiswoordraadsel & Wonen (Image 7) ───────────────────────────────────
+  { nl: "file", de: "der Stau", cat: "Vervoer & Stad" },
+  { nl: "vertraging", de: "die Verspätung", cat: "Vervoer & Stad" },
+  { nl: "autosnelweg", de: "die Autobahn(en)", cat: "Vervoer & Stad" },
+  { nl: "tram", de: "die Straßenbahn(en)", cat: "Vervoer & Stad" },
+  { nl: "metro", de: "die U-Bahn(en)", cat: "Vervoer & Stad" },
+  { nl: "verkeerslicht", de: "die Ampel(n)", cat: "Vervoer & Stad" },
+  { nl: "kruispunt", de: "die Kreuzung(en)", cat: "Vervoer & Stad" },
+  { nl: "halte", de: "die Haltestelle(n)", cat: "Vervoer & Stad" },
+  { nl: "station", de: "der Bahnhof (¨e)", cat: "Vervoer & Stad" },
+  { nl: "vrachtwagen", de: "der LKW", cat: "Vervoer & Stad" },
+  { nl: "vliegtuig", de: "das Flugzeug(e)", cat: "Vervoer & Stad" },
+  { nl: "luchthafen", de: "der Flughafen", cat: "Vervoer & Stad" },
+  { nl: "spoor", de: "das Gleis(e)", cat: "Vervoer & Stad" },
+  { nl: "voertuig", de: "der PKW", cat: "Vervoer & Stad" },
+  { nl: "ongeval", de: "der Unfall (¨e)", cat: "Vervoer & Stad" },
+  { nl: "schip", de: "das Schiff(e)", cat: "Vervoer & Stad" },
+  { nl: "bus", de: "der Bus(se)", cat: "Vervoer & Stad" },
+  { nl: "trein", de: "der Zug (¨e)", cat: "Vervoer & Stad" },
+  { nl: "moto", de: "das Motorrad (¨er)", cat: "Vervoer & Stad" },
+  { nl: "fiets", de: "das Fahrrad (¨er)", cat: "Vervoer & Stad" },
+  { nl: "voetpad", de: "der Gehweg(e)", cat: "Vervoer & Stad" },
+  { nl: "fietspad", de: "der Radweg(e)", cat: "Vervoer & Stad" },
+  { nl: "dienstregeling", de: "der Fahrplan (¨e)", cat: "Vervoer & Stad" },
+  { nl: "vervoersbewijs", de: "die Fahrkarte(n)", cat: "Vervoer & Stad" },
+  { nl: "auto", de: "das Auto(s) / der Wagen", cat: "Vervoer & Stad" },
+  // Wonen in der Stadt
+  { nl: "aanbod", de: "das Angebot(e)", cat: "Wonen" },
+  { nl: "jongeren", de: "Jugendliche", cat: "Wonen" },
+  { nl: "parkeerplaats", de: "der Parkplatz (¨e)", cat: "Wonen" },
+  { nl: "moeilijk", de: "schwierig", cat: "Wonen" },
+  { nl: "gemakkelijk", de: "einfach, leicht", cat: "Wonen" },
+  { nl: "rijbewijs", de: "der Führerschein(e)", cat: "Wonen" },
+  { nl: "rust", de: "die Ruhe", cat: "Wonen" },
+  { nl: "rustig", de: "ruhig", cat: "Wonen" },
+  { nl: "winkel", de: "das Geschäft(e)", cat: "Wonen" },
+  { nl: "bouwwerf / werk", de: "die Baustelle(n)", cat: "Wonen" },
+  { nl: "saai", de: "langweilig", cat: "Wonen" },
+  { nl: "erg", de: "schlimm", cat: "Wonen" },
+  { nl: "dorp", de: "das Dorf (¨e)", cat: "Wonen" },
+  { nl: "stad", de: "die Stadt (¨e)", cat: "Wonen" },
+  // Verkeersschilder vocab
+  { nl: "verkeersbord", de: "das Verkehrsschild(er)", cat: "Verkeer vocab" },
+  { nl: "voorrang", de: "die Vorfahrt", cat: "Verkeer vocab" },
+  { nl: "bocht", de: "die Kurve(n)", cat: "Verkeer vocab" },
+  { nl: "doodlopende straat", de: "die Sackgasse(n)", cat: "Verkeer vocab" },
+  { nl: "max snelheid", de: "die Höchstgeschwindigkeit", cat: "Verkeer vocab" },
+  { nl: "voetganger", de: "der Fußgänger(-)", cat: "Verkeer vocab" },
+  { nl: "laadpaal", de: "die Ladestation(en)", cat: "Verkeer vocab" },
+  { nl: "voetgangerszone", de: "die Fußgängerzone", cat: "Verkeer vocab" },
+  { nl: "inhalen", de: "überholen", cat: "Verkeer vocab" },
+  { nl: "draaien / keren", de: "wenden", cat: "Verkeer vocab" },
+  { nl: "elektrische auto", de: "das Elektrofahrzeug(e)", cat: "Verkeer vocab" },
+  { nl: "rijstrook", de: "der Fahrstreifen(-)", cat: "Verkeer vocab" },
+  { nl: "eenrichtingsstraat", de: "die Einbahnstraße(n)", cat: "Verkeer vocab" },
+  // 5. Abends in der Bar
+  { nl: "afstand doen van", de: "verzichten auf", cat: "Avond & Bar" },
+  { nl: "schadelijk zijn", de: "schaden + Dativ", cat: "Avond & Bar" },
+  { nl: "laag", de: "niedrig", cat: "Avond & Bar" },
+  { nl: "reusachtig", de: "riesig", cat: "Avond & Bar" },
+  { nl: "winstgevend", de: "lukrativ", cat: "Avond & Bar" },
+  { nl: "uitdaging", de: "die Herausforderung", cat: "Avond & Bar" },
+  { nl: "tentoonstelling", de: "die Ausstellung(en)", cat: "Avond & Bar" },
+  { nl: "op het einde van de maand", de: "am Monatsende", cat: "Avond & Bar" },
+  { nl: "reden", de: "der Grund (¨e)", cat: "Avond & Bar" },
+  { nl: "eigenaar", de: "der Besitzer(-)", cat: "Avond & Bar" },
+
+  // ── Silbenspiel (Image 8) ─────────────────────────────────────────────────
+  { nl: "disco", de: "die Diskothek(en)", cat: "Vrije tijd" },
+  { nl: "openluchtzwembad", de: "das Freibad (¨er)", cat: "Vrije tijd" },
+  { nl: "pretpark", de: "der Vergnügungspark(e)", cat: "Vrije tijd" },
+  { nl: "opera", de: "die Oper(n)", cat: "Vrije tijd" },
+  { nl: "fitness", de: "das Fitnesszentrum", cat: "Vrije tijd" },
+  { nl: "bibliotheek", de: "die Bibliothek(en)", cat: "Vrije tijd" },
+  { nl: "lenen", de: "leihen", cat: "Vrije tijd" },
+  { nl: "bowling", de: "die Kegelbahn", cat: "Vrije tijd" },
+  { nl: "bioscoop", de: "das Kino(s)", cat: "Vrije tijd" },
+  { nl: "theater", de: "das Theater(-)", cat: "Vrije tijd" },
+  { nl: "museum", de: "das Museum (Museen)", cat: "Vrije tijd" },
+
+  // ── Wortschatz verhaallexicon (Image 9) ───────────────────────────────────
+  { nl: "op een dag", de: "eines Tages", cat: "Verhaal vocab" },
+  { nl: "wachten (hij wacht)", de: "warten (er wartet)", cat: "Verhaal vocab" },
+  { nl: "dakloze", de: "der Obdachlose", cat: "Verhaal vocab" },
+  { nl: "zakenman", de: "der Geschäftsmann", cat: "Verhaal vocab" },
+  { nl: "munt", de: "die Münze(n)", cat: "Verhaal vocab" },
+  { nl: "volgen", de: "folgen (er folgt mir)", cat: "Verhaal vocab" },
+  { nl: "bankbiljet", de: "der Schein(e)", cat: "Verhaal vocab" },
+  { nl: "bevallen (dat bevalt me)", de: "gefallen (das gefällt mir)", cat: "Verhaal vocab" },
+  { nl: "gewoonte", de: "die Gewohnheit(en)", cat: "Verhaal vocab" },
+  { nl: "parkeerplaats", de: "der Parkplatz (¨e)", cat: "Verhaal vocab" },
+  { nl: "gebouw", de: "das Gebäude(-)", cat: "Verhaal vocab" },
+  { nl: "wassen (hij wast)", de: "waschen (er wäscht)", cat: "Verhaal vocab" },
+  { nl: "opzettelijk", de: "absichtlich", cat: "Verhaal vocab" },
+  { nl: "vuil", de: "schmutzig", cat: "Verhaal vocab" },
+  { nl: "het werk", de: "die Arbeit", cat: "Verhaal vocab" },
+  { nl: "omvervallen (hij valt om)", de: "umfallen (er fällt um)", cat: "Verhaal vocab" },
+  { nl: "uitstappen", de: "aussteigen", cat: "Verhaal vocab" },
+  { nl: "hulp geven", de: "Hilfe leisten", cat: "Verhaal vocab" },
+  { nl: "gift", de: "die Spende(n)", cat: "Verhaal vocab" },
+  { nl: "opgewonden", de: "aufgeregt", cat: "Verhaal vocab" },
+  { nl: "achteruit", de: "rückwärts", cat: "Verhaal vocab" },
+  { nl: "vatten / betrappen", de: "erwischen", cat: "Verhaal vocab" },
+  { nl: "wegsluipen", de: "sich wegschleichen", cat: "Verhaal vocab" },
+  { nl: "proberen", de: "versuchen", cat: "Verhaal vocab" },
+  { nl: "verzorgd", de: "gepflegt", cat: "Verhaal vocab" },
+  { nl: "gekwetst", de: "verletzt", cat: "Verhaal vocab" },
+
+  // ── Gevoelens & verhaalvocab (Image 10) ──────────────────────────────────
+  { nl: "ontgoocheld", de: "enttäuscht", cat: "Gevoelens" },
+  { nl: "bang / angstig", de: "ängstlich", cat: "Gevoelens" },
+  { nl: "wanhopig", de: "verzweifelt", cat: "Gevoelens" },
+  { nl: "woedend", de: "wütend", cat: "Gevoelens" },
+  { nl: "hopeloos", de: "hoffnungslos", cat: "Gevoelens" },
+  { nl: "reden", de: "der Grund (¨e)", cat: "Gevoelens" },
+  { nl: "moedeloos", de: "mutlos", cat: "Gevoelens" },
+  { nl: "bezorgd", de: "sorgenvoll", cat: "Gevoelens" },
+  { nl: "weglopen", de: "abhauen", cat: "Gevoelens" },
+  { nl: "opsluiten", de: "einsperren", cat: "Gevoelens" },
+  { nl: "missen (iets mislopen)", de: "verpassen", cat: "Gevoelens" },
+  { nl: "iemand missen", de: "vermissen", cat: "Gevoelens" },
+  { nl: "vijver", de: "der Teich(e)", cat: "Gevoelens" },
+  { nl: "vastgroeien", de: "festwachsen", cat: "Gevoelens" },
+  { nl: "plaats", de: "der Ort(e)", cat: "Gevoelens" },
+  { nl: "juwelen", de: "der Schmuck", cat: "Gevoelens" },
+  { nl: "huissleutel", de: "der Hausschlüssel(-)", cat: "Gevoelens" },
+  { nl: "weggooien", de: "wegwerfen", cat: "Gevoelens" },
+  { nl: "liften / trampen", de: "trampen", cat: "Gevoelens" },
+  { nl: "vrachtwagen", de: "der Lastwagen", cat: "Gevoelens" },
+  { nl: "verpanden", de: "verpfänden", cat: "Gevoelens" },
+  { nl: "avontuur", de: "das Abenteuer(-)", cat: "Gevoelens" },
+  { nl: "podium", de: "die Bühne(n)", cat: "Gevoelens" },
+  { nl: "auditie", de: "das Vorsprechen", cat: "Gevoelens" },
+
+  // ── Bank & Financiën (Images 11 & 12) ────────────────────────────────────
+  { nl: "storten", de: "einzahlen", cat: "Bank" },
+  { nl: "kosten", de: "die Gebühr(en)", cat: "Bank" },
+  { nl: "belastingen", de: "die Steuer(n)", cat: "Bank" },
+  { nl: "aanvragen", de: "beantragen", cat: "Bank" },
+  { nl: "bedrag", de: "der Betrag (¨e)", cat: "Bank" },
+  { nl: "lenen", de: "leihen", cat: "Bank" },
+  { nl: "zich veroorloven", de: "sich leisten", cat: "Bank" },
+  { nl: "in het rood staan", de: "überziehen", cat: "Bank" },
+  { nl: "overschrijven", de: "überweisen", cat: "Bank" },
+  { nl: "rekeningstand", de: "der Kontostand", cat: "Bank" },
+  { nl: "blokkeren", de: "sperren", cat: "Bank" },
+  { nl: "intrest", de: "der Zins(en)", cat: "Bank" },
+  { nl: "rekeninguitreksel", de: "der Kontoauszug (¨e)", cat: "Bank" },
+  { nl: "inkomen", de: "das Einkommen(-)", cat: "Bank" },
+  { nl: "moeten betaald worden", de: "fällig sein", cat: "Bank" },
+  { nl: "Hij zou graag een rekening openen.", de: "Er möchte ein Konto eröffnen.", cat: "Bank" },
+  { nl: "Je moet je rekening blokkeren.", de: "Du musst dein Konto sperren.", cat: "Bank" },
+  { nl: "Hij heeft het formulier niet ingevuld.", de: "Er hat das Formular nicht ausgefüllt.", cat: "Bank" },
+  { nl: "Ik ben mijn nummer vergeten.", de: "Ich habe meine Nummer vergessen.", cat: "Bank" },
+  { nl: "Waar kan ik geld afhalen?", de: "Wo kann ich Geld abheben?", cat: "Bank" },
+  { nl: "Heb jij geen briefje/briefjes?", de: "Hast du keinen Schein / keine Scheine?", cat: "Bank" },
+  { nl: "Ik heb enkel muntstukken.", de: "Ich habe nur Münzen.", cat: "Bank" },
+  { nl: "Iedere maand betaal je kosten.", de: "Jeden Monat zahlst du Gebühren.", cat: "Bank" },
+  { nl: "De huur moet nog betaald worden.", de: "Die Miete ist fällig.", cat: "Bank" },
+  { nl: "Waar kan ik een nieuwe kaart aanvragen?", de: "Wo kann ich eine neue Karte beantragen?", cat: "Bank" },
+  { nl: "Hij heeft geen inkomen.", de: "Er hat kein Einkommen.", cat: "Bank" },
+  { nl: "Je kan niet geld lenen als je een inkomen hebt.", de: "Du kannst Geld leihen, wenn du ein Einkommen hast.", cat: "Bank" },
+  { nl: "Hij wil een opleiding volgen.", de: "Er will eine Ausbildung machen.", cat: "Bank" },
+  { nl: "Hij moet een cursus Duits volgen.", de: "Er muss einen Deutschkurs besuchen.", cat: "Bank" },
+  { nl: "De intresten zijn hoog.", de: "Die Zinsen sind hoch.", cat: "Bank" },
+  { nl: "Waar is de dichtstbijzijnde geldautomaat?", de: "Wo ist der nächste Geldautomat?", cat: "Bank" },
+  { nl: "Dat kan ik mij niet veroorloven.", de: "Das kann ich mir nicht leisten.", cat: "Bank" },
+  { nl: "Mag ik met de kaart betalen?", de: "Darf ich mit der Karte bezahlen?", cat: "Bank" },
+  { nl: "Jij moet nog geld overschrijven.", de: "Du musst noch Geld überweisen.", cat: "Bank" },
+  { nl: "Wat is uw rekeningnummer?", de: "Was ist Ihre Kontonummer?", cat: "Bank" },
+  { nl: "Ik sta in het rood.", de: "Ich habe mein Konto überzogen.", cat: "Bank" },
+  { nl: "Kan u een briefje wisselen?", de: "Können Sie einen Schein wechseln.", cat: "Bank" },
+  { nl: "De bankbediende heeft mij geholpen.", de: "Der/Die Bankangestellte hat mir geholfen.", cat: "Bank" },
+  { nl: "Dat is goedkoop / duur.", de: "Das ist billig / teuer.", cat: "Bank" },
+  { nl: "Heeft u kleinere biljetten?", de: "Haben Sie kleinere Scheine?", cat: "Bank" },
+  { nl: "Hij heeft het bedrag overgeschreven.", de: "Er hat den Betrag überwiesen.", cat: "Bank" },
+  { nl: "Het bedrag moet nog gestort worden.", de: "Der Betrag muss noch überwiesen werden.", cat: "Bank" },
+
+  // ── Kleding (Images 13 & 14) ──────────────────────────────────────────────
+  { nl: "lange broek", de: "die Hose(n)", cat: "Kleding" },
+  { nl: "korte broek", de: "die Kurzhose(n) / die Shorts (Pl)", cat: "Kleding" },
+  { nl: "hemd", de: "das Hemd(en)", cat: "Kleding" },
+  { nl: "bloes", de: "die Bluse(n)", cat: "Kleding" },
+  { nl: "pull", de: "der Pullover(-) / der Pulli(s)", cat: "Kleding" },
+  { nl: "t-shirt", de: "das T-Shirt(s)", cat: "Kleding" },
+  { nl: "riem", de: "der Gürtel(-)", cat: "Kleding" },
+  { nl: "horloge", de: "die Uhr(en)", cat: "Kleding" },
+  { nl: "rok", de: "der Rock (¨e)", cat: "Kleding" },
+  { nl: "kleed / jurk", de: "das Kleid(er)", cat: "Kleding" },
+  { nl: "hoge hakken", de: "hohe Absätze", cat: "Kleding" },
+  { nl: "kous", de: "der Strumpf (¨e)", cat: "Kleding" },
+  { nl: "sok", de: "die Socke(n)", cat: "Kleding" },
+  { nl: "kousenbroek", de: "die Strumpfhose(n)", cat: "Kleding" },
+  { nl: "schoen", de: "der Schuh(e)", cat: "Kleding" },
+  { nl: "laars", de: "der Stiefel(-)", cat: "Kleding" },
+  { nl: "paar schoenen", de: "das Paar Schuhe", cat: "Kleding" },
+  { nl: "kostuum", de: "der Anzug (¨e)", cat: "Kleding" },
+  { nl: "das", de: "die Krawatte(n)", cat: "Kleding" },
+  { nl: "jas", de: "die Jacke(n)", cat: "Kleding" },
+  { nl: "mantel", de: "der Mantel (¨)", cat: "Kleding" },
+  { nl: "hoed", de: "der Hut (¨e)", cat: "Kleding" },
+  { nl: "muts", de: "die Mütze(n)", cat: "Kleding" },
+  { nl: "sjaal", de: "der Schal(e)", cat: "Kleding" },
+  { nl: "handschoen", de: "der Handschuh(e)", cat: "Kleding" },
+  { nl: "maat (kleding)", de: "die Größe", cat: "Kleding" },
+  { nl: "strak", de: "eng", cat: "Kleding" },
+  { nl: "kassaticket", de: "der Beleg / Kassenzettel", cat: "Kleding" },
+  { nl: "dragen", de: "tragen", cat: "Kleding" },
+  { nl: "uitzien", de: "aussehen", cat: "Kleding" },
+  { nl: "kleedhokje", de: "die Umkleidekabine", cat: "Kleding" },
+  { nl: "(aan)passen / uitproberen", de: "anprobieren", cat: "Kleding" },
+  { nl: "passen / goed zitten", de: "passen (+ Dativ)", cat: "Kleding" },
+  { nl: "goedkoop", de: "billig", cat: "Kleding" },
+  { nl: "duur", de: "duur / teuer", cat: "Kleding" },
+  { nl: "mooi", de: "schön", cat: "Kleding" },
+  { nl: "omruilen", de: "umtauschen", cat: "Kleding" },
+  { nl: "uitstekend", de: "ausgezeichnet", cat: "Kleding" },
+  { nl: "etalage", de: "das Schaufenster(-)", cat: "Kleding" },
+  // Kleding dialogen
+  { nl: "Waar kan ik deze broek passen?", de: "Wo kann ich diese Hose anprobieren?", cat: "Kleding – dialoog" },
+  { nl: "We hebben uw maat niet meer.", de: "Wir haben Ihre Größe nicht.", cat: "Kleding – dialoog" },
+  { nl: "Deze schoenen zijn te duur.", de: "Diese Schuhe sind zu teuer.", cat: "Kleding – dialoog" },
+  { nl: "Deze kleur bevalt mij niet.", de: "Diese Farbe gefällt mir nicht.", cat: "Kleding – dialoog" },
+  { nl: "Mag ik deze pullover ruilen?", de: "Darf ich diesen Pulli umtauschen?", cat: "Kleding – dialoog" },
+  { nl: "Kan ik u helpen?", de: "Kann ich Ihnen helfen?", cat: "Kleding – dialoog" },
+  { nl: "Ik zoek een broek.", de: "Ich suche eine Hose.", cat: "Kleding – dialoog" },
+  { nl: "Ik zou graag schoenen kopen.", de: "Ich möchte Schuhe kaufen.", cat: "Kleding – dialoog" },
+  { nl: "Welke maat heeft u?", de: "Welche Größe haben Sie?", cat: "Kleding – dialoog" },
+  { nl: "Heeft u een andere maat/kleur?", de: "Haben Sie eine andere Größe/Farbe?", cat: "Kleding – dialoog" },
+  { nl: "Mag ik de pull passen?", de: "Darf ich den Pulli anprobieren?", cat: "Kleding – dialoog" },
+  { nl: "Waar zijn de pashokjes?", de: "Wo sind die Umkleidekabinen?", cat: "Kleding – dialoog" },
+  { nl: "De pull staat u goed.", de: "Der Pulli steht Ihnen gut.", cat: "Kleding – dialoog" },
+  { nl: "De broek past mij perfect.", de: "Die Hose passt mir ausgezeichnet.", cat: "Kleding – dialoog" },
+  { nl: "Hoe bevalt de pull u?", de: "Wie gefällt Ihnen der Pulli?", cat: "Kleding – dialoog" },
+  { nl: "Komt u mee naar de kassa.", de: "Kommen Sie mit zur Kasse.", cat: "Kleding – dialoog" },
+  { nl: "Ik leg de rok aan de kant.", de: "Ich lege den Rock zur Seite.", cat: "Kleding – dialoog" },
+  { nl: "Mag ik de rok ruilen?", de: "Darf ich den Rock umtauschen?", cat: "Kleding – dialoog" },
+  { nl: "Dan heeft u het kassaticket nodig.", de: "Dann brauchen Sie den Beleg.", cat: "Kleding – dialoog" },
+  { nl: "Ik heb de t-shirt in de etalage gezien.", de: "Ich habe das T-Shirt im Schaufenster gesehen.", cat: "Kleding – dialoog" },
+  { nl: "Wat draag jij graag?", de: "Was trägst du gern?", cat: "Kleding – dialoog" },
+  { nl: "Er is korting als u 2 stuks koopt.", de: "Es gibt Rabatt, wenn Sie 2 Stück kaufen.", cat: "Kleding – dialoog" },
+  // Kleding thema's
+  { nl: "Hij let op de prijs.", de: "Er achtet auf den Preis.", cat: "Mode & ethiek" },
+  { nl: "Hij vindt de kwaliteit belangrijk.", de: "Er findet die Qualität wichtig.", cat: "Mode & ethiek" },
+  { nl: "Het is slecht voor het milieu.", de: "Es ist schlecht für die Umwelt.", cat: "Mode & ethiek" },
+  { nl: "Het is niet duurzaam.", de: "Es ist nicht nachhaltig.", cat: "Mode & ethiek" },
+  { nl: "Hoe zijn de werkomstandigheden?", de: "Wie sind die Arbeitsbedingungen?", cat: "Mode & ethiek" },
+  { nl: "De lonen zijn laag.", de: "Die Löhne sind niedrig.", cat: "Mode & ethiek" },
+  { nl: "Waar wordt de kleding gemaakt?", de: "Wo wird die Kleidung hergestellt?", cat: "Mode & ethiek" },
+  { nl: "Is ook jouw kleerkast vol?", de: "Ist auch dein Kleiderschrank voll?", cat: "Mode & ethiek" },
+  { nl: "De reportage toont een schaduwzijde.", de: "Die Reportage zeigt eine Schattenseite.", cat: "Mode & ethiek" },
+  { nl: "Voor wie heeft dat gevolgen?", de: "Für wen hat das Folgen?", cat: "Mode & ethiek" },
+  { nl: "Wat klopt er niet?", de: "Was stimmt nicht?", cat: "Mode & ethiek" },
+  { nl: "Er zijn te weinig opdrachten.", de: "Es gibt zu wenig Aufträge.", cat: "Mode & ethiek" },
+  { nl: "Is er vooruitgang mogelijk?", de: "Ist Fortschritt möglich?", cat: "Mode & ethiek" },
+  { nl: "Zal je het kopen als je dat ziet?", de: "Wirst du es kaufen, wenn du das siehst?", cat: "Mode & ethiek" },
+  { nl: "Men wil zien hoe de klanten reageren.", de: "Man will sehen, wie die Kunden reagieren.", cat: "Mode & ethiek" },
+  { nl: "Alles wordt ter plaatse gemaakt.", de: "Alles wird vor Ort hergestellt.", cat: "Mode & ethiek" },
+  { nl: "Kinderen werken aan naaimachines.", de: "Kinder arbeiten an Nähmaschinen.", cat: "Mode & ethiek" },
+  { nl: "De fabriek is ingestort.", de: "Die Fabrik ist eingestürzt.", cat: "Mode & ethiek" },
+  { nl: "Wanneer vindt de plaats?", de: "Wann findet die Woche statt?", cat: "Mode & ethiek" },
+  { nl: "Wat is het doel van deze week?", de: "Was ist das Ziel dieser Woche?", cat: "Mode & ethiek" },
+  { nl: "Men wil betere werkomstandigheden.", de: "Man will bessere Arbeitsbedingungen.", cat: "Mode & ethiek" },
+];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let deck = [];
+let errorCards = JSON.parse(localStorage.getItem('fc_errors') || '[]');
+let current = 0;
+let goodCount = 0;
+let badCount = 0;
+let sessionErrors = [];
+let mode = 'all';
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && m === 'all') || (i === 1 && m === 'errors'));
+  });
+  if (m === 'errors') {
+    if (errorCards.length === 0) {
+      alert('Je hebt nog geen foutenlijst. Maak eerst een ronde!');
+      setMode('all');
+      return;
+    }
+    startDeck(errorCards);
+  } else {
+    startDeck(ALL_CARDS);
+  }
+}
+
+function startDeck(cards) {
+  deck = shuffle(cards);
+  current = 0;
+  goodCount = 0;
+  badCount = 0;
+  sessionErrors = [];
+  document.getElementById('summary').classList.remove('active');
+  document.getElementById('summary').style.display = 'none';
+  document.getElementById('game').style.display = 'flex';
+  document.getElementById('stat-total').textContent = deck.length;
+  document.getElementById('deck-info').textContent = `${deck.length} kaarten • ${[...new Set(deck.map(c => c.cat))].length} categorieën`;
+  showCard();
+}
+
+function showCard() {
+  if (current >= deck.length) { showSummary(); return; }
+  const c = deck[current];
+  document.getElementById('front-text').textContent = c.nl;
+  document.getElementById('back-text').textContent = c.de;
+  document.getElementById('front-cat').textContent = c.cat;
+  document.getElementById('card').classList.remove('flipped');
+  document.getElementById('btn-show').classList.remove('hidden');
+  document.getElementById('answer-btns').classList.add('hidden');
+  updateStats();
+}
+
+function showAnswer() {
+  document.getElementById('card').classList.add('flipped');
+  document.getElementById('btn-show').classList.add('hidden');
+  document.getElementById('answer-btns').classList.remove('hidden');
+}
+
+function answer(correct) {
+  if (correct) {
+    goodCount++;
+  } else {
+    badCount++;
+    sessionErrors.push(deck[current]);
+    // merge into persistent error list (deduplicate by nl)
+    const existing = errorCards.map(c => c.nl);
+    if (!existing.includes(deck[current].nl)) {
+      errorCards.push(deck[current]);
+    }
+    localStorage.setItem('fc_errors', JSON.stringify(errorCards));
+  }
+  current++;
+  showCard();
+}
+
+function updateStats() {
+  document.getElementById('stat-pos').textContent = current + 1;
+  document.getElementById('stat-good').textContent = goodCount;
+  document.getElementById('stat-bad').textContent = badCount;
+  const pct = deck.length ? (current / deck.length * 100) : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+function showSummary() {
+  document.getElementById('progress-bar').style.width = '100%';
+  document.getElementById('game').style.display = 'none';
+  const s = document.getElementById('summary');
+  s.style.display = 'flex';
+  s.classList.add('active');
+
+  const pct = deck.length ? Math.round(goodCount / deck.length * 100) : 0;
+  document.getElementById('summary-title').textContent =
+    pct >= 80 ? 'Uitstekend! 🎉' : pct >= 50 ? 'Goed gedaan! 👍' : 'Blijf oefenen! 💪';
+  document.getElementById('summary-sub').textContent = `Score: ${pct}% correct (${goodCount}/${deck.length})`;
+  document.getElementById('s-total').textContent = deck.length;
+  document.getElementById('s-good').textContent = goodCount;
+  document.getElementById('s-bad').textContent = badCount;
+  document.getElementById('error-count').textContent = sessionErrors.length;
+
+  const btn = document.getElementById('btn-retry-errors');
+  btn.style.display = sessionErrors.length > 0 ? 'block' : 'none';
+
+  // Show errors list
+  const list = document.getElementById('errors-list');
+  list.innerHTML = '';
+  if (sessionErrors.length > 0) {
+    document.getElementById('errors-panel').classList.add('active');
+    sessionErrors.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'error-item';
+      div.innerHTML = `<span class="nl">${c.nl}</span><span class="de">${c.de}</span>`;
+      list.appendChild(div);
+    });
+  } else {
+    document.getElementById('errors-panel').classList.remove('active');
+  }
+}
+
+function retryErrors() {
+  startDeck(sessionErrors.length > 0 ? sessionErrors : errorCards);
+}
+
+function restartAll() {
+  setMode('all');
+}
+
+// Init
+startDeck(ALL_CARDS);
+</script>
+</body>
+</html>
